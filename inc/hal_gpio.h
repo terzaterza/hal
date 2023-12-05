@@ -58,5 +58,10 @@ inline void gpio_port_clear(gpio_port_t port, gpio_pin_t pins);
  */
 inline void gpio_port_toggle(gpio_port_t port, gpio_pin_t pins);
 
+/**
+ * GPIO external interrupt ISR
+ * @note This function should be called from lower level (driver's) ISR in the hal_gpio.c
+ */
+inline void gpio_exti_isr(gpio_port_t port, gpio_pin_t pin);
 
 #endif /* HAL_GPIO_H */
