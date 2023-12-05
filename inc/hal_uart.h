@@ -4,12 +4,16 @@
 #include "hal_core.h"
 #include <stdint.h>
 
-typedef enum {
-    UART_1,
-    UART_2,
-    UART_3,
-    UART_4
-} uart_t;
+#ifndef HAL_UART_TYPEDEF
+    typedef enum {
+        UART_1,
+        UART_2,
+        UART_3,
+        UART_4
+    } uart_t;
+#else
+    typedef HAL_UART_TYPEDEF uart_t;
+#endif
 
 /**
  * Blocking function

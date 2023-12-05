@@ -3,16 +3,20 @@
 
 #include "hal_core.h"
 
-typedef enum {
-	GPIO_PORT_A,
-	GPIO_PORT_B,
-	GPIO_PORT_C,
-	GPIO_PORT_D,
-	GPIO_PORT_E,
-	GPIO_PORT_F,
-	GPIO_PORT_G,
-	GPIO_PORT_H
-} gpio_port_t;
+#ifndef HAL_GPIO_PORT_TYPEDEF
+	typedef enum {
+		GPIO_PORT_A,
+		GPIO_PORT_B,
+		GPIO_PORT_C,
+		GPIO_PORT_D,
+		GPIO_PORT_E,
+		GPIO_PORT_F,
+		GPIO_PORT_G,
+		GPIO_PORT_H
+	} gpio_port_t;
+#else
+	typedef HAL_GPIO_PORT_TYPEDEF gpio_port_t;
+#endif
 
 typedef enum {
 	GPIO_PIN_0 = 0x1,

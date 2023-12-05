@@ -4,12 +4,16 @@
 #include "hal_core.h"
 #include <stdint.h>
 
-typedef enum {
-    I2C_1,
-    I2C_2,
-    I2C_3,
-    I2C_4
-} i2c_t;
+#ifndef HAL_I2C_TYPEDEF
+    typedef enum {
+        I2C_1,
+        I2C_2,
+        I2C_3,
+        I2C_4
+    } i2c_t;
+#else
+    typedef HAL_I2C_TYPEDEF i2c_t;
+#endif
 
 /**
  * Blocking function
