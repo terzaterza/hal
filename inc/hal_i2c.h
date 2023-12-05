@@ -23,7 +23,7 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
  * Receive <size> bytes via I2C from slave at address <addr>
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
+inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 /**
  * Send <size> bytes via I2C to slave at address <addr>
@@ -39,7 +39,7 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
  * On complete i2c_master_recv_isr is called
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
+inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 /**
  * Master send ISR
