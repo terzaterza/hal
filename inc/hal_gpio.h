@@ -1,19 +1,11 @@
 #ifndef HAL_GPIO_H
 #define HAL_GPIO_H
 
+#include "hal_conf.h"
 #include "hal_core.h"
 
 #ifndef HAL_GPIO_PORT_TYPEDEF
-	typedef enum {
-		GPIO_PORT_A,
-		GPIO_PORT_B,
-		GPIO_PORT_C,
-		GPIO_PORT_D,
-		GPIO_PORT_E,
-		GPIO_PORT_F,
-		GPIO_PORT_G,
-		GPIO_PORT_H
-	} gpio_port_t;
+	#error "HAL_GPIO_PORT_TYPEDEF not defined"
 #else
 	typedef HAL_GPIO_PORT_TYPEDEF gpio_port_t;
 #endif

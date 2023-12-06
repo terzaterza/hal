@@ -1,16 +1,12 @@
 #ifndef HAL_UART_H
 #define HAL_UART_H
 
-#include "hal_core.h"
 #include <stdint.h>
+#include "hal_conf.h"
+#include "hal_core.h"
 
 #ifndef HAL_UART_TYPEDEF
-    typedef enum {
-        UART_1,
-        UART_2,
-        UART_3,
-        UART_4
-    } uart_t;
+    #error "HAL_UART_TYPEDEF not defined"
 #else
     typedef HAL_UART_TYPEDEF uart_t;
 #endif

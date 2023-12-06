@@ -1,16 +1,12 @@
 #ifndef HAL_I2C_H
 #define HAL_I2C_H
 
-#include "hal_core.h"
 #include <stdint.h>
+#include "hal_conf.h"
+#include "hal_core.h"
 
 #ifndef HAL_I2C_TYPEDEF
-    typedef enum {
-        I2C_1,
-        I2C_2,
-        I2C_3,
-        I2C_4
-    } i2c_t;
+    #error "HAL_I2C_TYPEDEF not defined"
 #else
     typedef HAL_I2C_TYPEDEF i2c_t;
 #endif
