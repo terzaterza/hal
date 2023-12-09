@@ -41,6 +41,7 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
  * Send <size> bytes via I2C to slave at address <addr>
  * @retval `HAL_STATUS_OK` if sending process was started correctly
  * @retval `HAL_STATUS_ERROR` if not
+ * @note `data` should not be modified until operation is complete
  * @note On complete `i2c_master_send_isr` is called
  * @note Implement in hal_i2c.c
  */

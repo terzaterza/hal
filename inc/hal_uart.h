@@ -41,6 +41,7 @@ inline hal_status_t uart_recv(uart_t uart, uint8_t* buff, uint16_t size, uint16_
  * Send <size> bytes via UART
  * @retval `HAL_STATUS_OK` if sending process was started correctly
  * @retval `HAL_STATUS_ERROR` if not
+ * @note `data` should not be modified until operation is complete
  * @note On complete `uart_send_isr` is called
  * @note Implement in hal_uart.c
  */
