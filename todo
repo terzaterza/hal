@@ -1,0 +1,4 @@
+add (uart, i2c, vcp)_register_callback(uart_t uart, callback_type_t callback_type)
+
+add hal_timer.h
+add hal_adc.h

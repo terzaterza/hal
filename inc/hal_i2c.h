@@ -12,17 +12,10 @@
 #endif
 
 /**
- * Get current status of the I2C interface
- * @retval `HAL_STATUS_OK` if interface is ready for next operation
- * @retval `HAL_STATUS_BUSY` if interface is currently processing an operation
- * @note User can also implement to return `HAL_STATUS_ERROR` if needed
-*/
-inline hal_status_t i2c_get_status(i2c_t i2c);
-
-/**
  * Send <size> bytes via I2C to slave at address <addr>
  * @retval `HAL_STATUS_OK` if sending completed succesfully
- * @retval `HAL_STATUS_ERROR` if previous sending operations is ongoing
+ * @retval `HAL_STATUS_BUSY` if previous sending operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if sending could not be started or was interrupted
  * @note Blocking function
  * @note Implement in hal_i2c.c
  */
@@ -31,7 +24,8 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
 /**
  * Receive <size> bytes via I2C from slave at address <addr>
  * @retval `HAL_STATUS_OK` if receiving completed succesfully
- * @retval `HAL_STATUS_ERROR` if previous receive operations is ongoing
+ * @retval `HAL_STATUS_BUSY` if previous receive operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if receiving could not be started or was interrupted
  * @note Blocking function
  * @note Implement in hal_i2c.c
  */
@@ -40,7 +34,8 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
 /**
  * Send <size> bytes via I2C to slave at address <addr>
  * @retval `HAL_STATUS_OK` if sending process was started correctly
- * @retval `HAL_STATUS_ERROR` if not
+ * @retval `HAL_STATUS_BUSY` if previous sending operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if sending could not be started
  * @note `data` should not be modified until operation is complete
  * @note On complete `i2c_master_send_isr` is called
  * @note Implement in hal_i2c.c
@@ -50,7 +45,8 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
 /**
  * Enable receiving <size> bytes via I2C from slave at address <addr>
  * @retval `HAL_STATUS_OK` if receiving process was started correctly
- * @retval `HAL_STATUS_ERROR` if not
+ * @retval `HAL_STATUS_BUSY` if previous receive operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if receiving could not be started
  * @note On complete `i2c_master_recv_isr` is called
  * @note Implement in hal_i2c.c
  */
