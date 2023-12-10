@@ -11,6 +11,13 @@
     typedef HAL_UART_TYPEDEF uart_t;
 #endif
 
+typedef enum {
+    UART_CB_SRC_SEND_COMPLETE,
+    UART_CB_SRC_RECV_COMPLETE,
+    UART_CB_SRC_SEND_ERROR,
+    UART_CB_SRC_RECV_ERROR
+} uart_callback_src_t;
+
 /**
  * Send <size> bytes via UART
  * @retval `HAL_STATUS_OK` if sending completed succesfully
@@ -53,15 +60,12 @@ inline hal_status_t uart_send_it(uart_t uart, uint8_t* data, uint16_t size, uint
 inline hal_status_t uart_recv_it(uart_t uart, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 /**
- * UART send ISR
- * @note This function should be called from lower level (driver's) ISR in the hal_uart.c
- */
-inline void uart_send_isr(uart_t uart, hal_status_t status);
-
-/**
- * UART receive ISR
- * @note This function should be called from lower level (driver's) ISR in the hal_uart.c
- */
-inline void uart_recv_isr(uart_t uart, hal_status_t status);
+ * Register a callback for UART event
+ * @retval `HAL_STATUS_OK` callback registered successfully
+ * @retval `HAL_STATUS_ERROR` callback registration failed
+ * @note Implement in hal_uart.c
+ * @note Multiple registrations should override the last one
+*/
+inline hal_status_t uart_register_callback(uart_t uart, callback_t callback, uart_callback_src_t src);
 
 #endif /* HAL_UART_H */

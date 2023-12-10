@@ -11,6 +11,17 @@
     typedef HAL_I2C_TYPEDEF i2c_t;
 #endif
 
+typedef enum {
+    I2C_CB_SRC_MASTER_SEND_COMPLETE,
+    I2C_CB_SRC_MASTER_RECV_COMPLETE,
+    I2C_CB_SRC_MASTER_SEND_ERROR,
+    I2C_CB_SRC_MASTER_RECV_ERROR,
+    I2C_CB_SRC_SLAVE_SEND_COMPLETE,
+    I2C_CB_SRC_SLAVE_RECV_COMPLETE,
+    I2C_CB_SRC_SLAVE_SEND_ERROR,
+    I2C_CB_SRC_SLAVE_RECV_ERROR
+} i2c_callback_src_t;
+
 /**
  * Send <size> bytes via I2C to slave at address <addr>
  * @retval `HAL_STATUS_OK` if sending completed succesfully
@@ -53,15 +64,12 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
 inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 /**
- * Master send ISR
- * @note This function should be called from lower level (driver's) ISR in the hal_i2c.c
- */
-inline void i2c_master_send_isr(i2c_t i2c, hal_status_t status);
-
-/**
- * Master receive ISR
- * @note This function should be called from lower level (driver's) ISR in the hal_i2c.c
- */
-inline void i2c_master_recv_isr(i2c_t i2c, hal_status_t status);
+ * Register a callback for I2C event
+ * @retval `HAL_STATUS_OK` callback registered successfully
+ * @retval `HAL_STATUS_ERROR` callback registration failed
+ * @note Implement in hal_i2c.c
+ * @note Multiple registrations should override the last one
+*/
+inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_callback_src_t src);
 
 #endif /* HAL_I2C_H */
