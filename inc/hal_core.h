@@ -7,4 +7,6 @@ typedef enum {
 	HAL_STATUS_BUSY
 } hal_status_t;
 
+typedef void (*callback_t)(hal_status_t);
+
 #endif /* HAL_CORE_H */

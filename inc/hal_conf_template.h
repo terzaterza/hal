@@ -13,6 +13,9 @@
 #define HAL_I2C_TYPEDEF         I2C_HandleTypeDef*
 #define HAL_UART_TYPEDEF        UART_HandleTypeDef*
 
+// #define HAL_I2C_USE_REGISTER_CALLBACKS
+// #define HAL_UART_USE_REGISTER_CALLBACKS
+
 #define GPIO_PORT_INT_1         GPIOA
 #define GPIO_PORT_LED_R         GPIOB
 #define GPIO_PORT_LED_G         GPIOB
