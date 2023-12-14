@@ -71,7 +71,7 @@ inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, 
  * @note Implement in hal_i2c.c
  * @note Multiple registrations should override the last one
 */
-inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t* callback, i2c_callback_src_t src);
+inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_callback_src_t src);
 #else
 /**
  * Master send ISR
