@@ -10,6 +10,7 @@
 
 #ifndef HAL_TIMER_TYPEDEF
     #error "HAL_TIMER_TYPEDEF not defined"
+    __TEMPLATE_TYPEDEF(timer_t);
 #else
     typedef HAL_TIMER_TYPEDEF timer_t;
 #endif

@@ -2,11 +2,11 @@
 #define HAL_GPIO_H
 
 #include <stdint.h>
-#include "hal_conf.h"
 #include "hal_core.h"
 
 #ifndef HAL_GPIO_PORT_TYPEDEF
 	#error "HAL_GPIO_PORT_TYPEDEF not defined"
+	__TEMPLATE_TYPEDEF(gpio_port_t);
 #else
 	typedef HAL_GPIO_PORT_TYPEDEF gpio_port_t;
 #endif
@@ -25,8 +25,6 @@
 #define GPIO_PIN_5	(gpio_pin_t)(0x20)
 #define GPIO_PIN_6	(gpio_pin_t)(0x40)
 #define GPIO_PIN_7	(gpio_pin_t)(0x80)
-
-#ifdef HAL_GPIO_16BIT
 #define GPIO_PIN_8	(gpio_pin_t)(0x100)
 #define GPIO_PIN_9	(gpio_pin_t)(0x200)
 #define GPIO_PIN_10	(gpio_pin_t)(0x400)
@@ -35,7 +33,6 @@
 #define GPIO_PIN_13	(gpio_pin_t)(0x2000)
 #define GPIO_PIN_14	(gpio_pin_t)(0x4000)
 #define GPIO_PIN_15	(gpio_pin_t)(0x8000)
-#endif
 
 /**
  * Read gpio port

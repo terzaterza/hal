@@ -2,11 +2,11 @@
 #define HAL_I2C_H
 
 #include <stdint.h>
-#include "hal_conf.h"
 #include "hal_core.h"
 
 #ifndef HAL_I2C_TYPEDEF
     #error "HAL_I2C_TYPEDEF not defined"
+    __TEMPLATE_TYPEDEF(i2c_t);
 #else
     typedef HAL_I2C_TYPEDEF i2c_t;
 #endif
@@ -76,6 +76,7 @@ inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_ca
 /**
  * Master send ISR
  * @note This function should be called from lower level (driver's) ISR in the hal_i2c.c
+ * @todo Could split these ISRs to send_cmplt_isr and send_error_isr
  */
 inline void i2c_master_send_isr(i2c_t i2c, hal_status_t status);
 

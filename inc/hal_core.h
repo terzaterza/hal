@@ -1,6 +1,36 @@
 #ifndef HAL_CORE_H
 #define HAL_CORE_H
 
+/**
+ * Get HAL resource (gpio, i2c, uart,...) by name
+ * Requires user to define what this resource is by using `HAL_SET_RESOURCE`
+ * 
+ * @example HAL_GET_RESOURCE(uart_t, TELEMETRY_UART)
+ * @example HAL_GET_RESOURCE(gpio_port_t, ENCODER_INTERRUPT_PORT)
+ * 
+ * @todo Check if can make this look for defines first before declaring as extern
+*/
+#define HAL_GET_RESOURCE(type, name)	extern const type name
+
+/**
+ * Set the resource reference for a specific target
+ * 
+ * @example HAL_SET_RESOURCE(uart_t, TELEMETRY_UART, &handle_uart1)
+ * 
+ * @todo Check if can infer resource type from HAL_GET_RESOURCE
+*/
+#define HAL_SET_RESOURCE(type, name, res)	const type name = (type)res
+
+/**
+ * Remove compiler warnings for unused function arguments
+*/
+#define UNUSED(x)				(void)x
+
+/**
+ * Define hal types as `void*` so apps can be written while target not specified
+*/
+#define __TEMPLATE_TYPEDEF(x)		typedef void* x
+
 typedef enum {
 	HAL_STATUS_OK,
 	HAL_STATUS_ERROR,

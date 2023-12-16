@@ -2,11 +2,11 @@
 #define HAL_UART_H
 
 #include <stdint.h>
-#include "hal_conf.h"
 #include "hal_core.h"
 
 #ifndef HAL_UART_TYPEDEF
     #error "HAL_UART_TYPEDEF not defined"
+    __TEMPLATE_TYPEDEF(uart_t);
 #else
     typedef HAL_UART_TYPEDEF uart_t;
 #endif
