@@ -21,7 +21,6 @@ inline hal_status_t vcp_send(uint8_t* data, uint16_t length);
  * Read `read_len` unread bytes which were received over VCP (serial port)
  * @returns Number of bytes which was actually read (available to read)
  * @note This function should read from the buffer where `vcp_recv_isr` stores received packets
- * @note Blocking function
 */
 inline uint16_t vcp_read(uint8_t* buffer, uint16_t read_len);
 
