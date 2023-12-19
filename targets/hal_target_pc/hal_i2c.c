@@ -27,6 +27,9 @@ typedef struct {
     uint16_t byte_count;
     /* Wait for slave to acknowledge addressing when starting reading process */
     uint8_t wait_ack;
+    /* Should ISR be called on complete or if error */
+    uint8_t int_mode;
+    /** @todo Add registrable callbacks here */
 } hal_target_pc_i2c_t;
 /** @todo Could use one buffer pointer for both tx and rx */
 
@@ -79,13 +82,17 @@ void peripheral_socket_handle_i2c()
             } else {
                 socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
                 i2c->status = I2C_FINISHED_OK;
-                return;
             }
         } else {
             /* Received byte was not an acknowledge so end transfer */
             socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
             i2c->status = I2C_FINISHED_ERROR;
-            return;
+        }
+
+        /* If in interrupt mode, auto-reset I2C to be ready for next send */
+        if (i2c->status != I2C_SENDING && i2c->int_mode == 1) {
+            i2c->status = I2C_READY;
+            i2c_master_send_isr(i2c, i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
         }
     } else if (i2c->status == I2C_RECEIVING) {
         if (i2c->wait_ack > 0) {
@@ -96,7 +103,6 @@ void peripheral_socket_handle_i2c()
                 /* Received byte was not an acknowledge so end transfer */
                 socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
                 i2c->status = I2C_FINISHED_ERROR;
-                return;
             }
         } else {
             /* Store received byte to rx buffer */
@@ -111,8 +117,13 @@ void peripheral_socket_handle_i2c()
                 /* Reading process completed successfully */
                 socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
                 i2c->status = I2C_FINISHED_OK;
-                return;
             }
+        }
+        
+        /* If in interrupt mode, auto-reset I2C to be ready for next send */
+        if (i2c->status != I2C_RECEIVING && i2c->int_mode == 1) {
+            i2c->status = I2C_READY;
+            i2c_master_recv_isr(i2c, i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
         }
     }
 }
@@ -134,6 +145,7 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
     i2c->status = I2C_SENDING;
     i2c->tx_buf = data;
     i2c->byte_count = size;
+    i2c->int_mode = 0;
 
     uint8_t addressing_byte = (addr < 1) | I2C_WRITE_BIT;
     uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
@@ -172,6 +184,7 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
     i2c->status = I2C_RECEIVING;
     i2c->rx_buf = buff;
     i2c->byte_count = size;
+    i2c->int_mode = 0;
 
     uint8_t addressing_byte = (addr < 1) | I2C_READ_BIT;
     uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
@@ -206,19 +219,24 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
 {
     UNUSED(timeout);
     
-    hal_status_t ret_status = HAL_STATUS_OK;
-
-    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
-
-    if (HAL_I2C_Master_Transmit_IT(i2c, addr < 1, data, size) != HAL_OK) {
-        ret_status = HAL_STATUS_ERROR;
+    if (i2c->status != I2C_READY) {
+        return HAL_STATUS_BUSY;
     }
 
-    if (ret_status == HAL_STATUS_OK) {
-        i2c_it_started_op = I2C_SEND;
+    i2c->status = I2C_SENDING;
+    i2c->tx_buf = data;
+    i2c->byte_count = size;
+    i2c->int_mode = 1;
+
+    uint8_t addressing_byte = (addr < 1) | I2C_WRITE_BIT;
+    uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
+
+    /* Send the first two bytes and if the amount actually sent is not 2 then return error */
+    if (socket_write(SOCKET_I2C_ID, send_data, 2) != 2) {
+        return HAL_STATUS_ERROR;
     }
 
-    return ret_status;
+    return HAL_STATUS_OK;
 }
 
 /**
@@ -233,19 +251,24 @@ inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, 
 {
     UNUSED(timeout);
     
-    hal_status_t ret_status = HAL_STATUS_OK;
-
-    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
-
-    if (HAL_I2C_Master_Receive_IT(i2c, addr < 1, buff, size) != HAL_OK) {
-        ret_status = HAL_STATUS_ERROR;
+    if (i2c->status != I2C_READY) {
+        return HAL_STATUS_BUSY;
     }
 
-    if (ret_status == HAL_STATUS_OK) {
-        i2c_it_started_op = I2C_RECV;
+    i2c->status = I2C_RECEIVING;
+    i2c->rx_buf = buff;
+    i2c->byte_count = size;
+    i2c->int_mode = 1;
+
+    uint8_t addressing_byte = (addr < 1) | I2C_READ_BIT;
+    uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
+
+    /* Send the first two bytes and if the amount actually sent is not 2 then return error */
+    if (socket_write(SOCKET_I2C_ID, send_data, 2) != 2) {
+        return HAL_STATUS_ERROR;
     }
 
-    return ret_status;
+    return HAL_STATUS_OK;
 }
 
 #ifdef HAL_I2C_USE_REGISTER_CALLBACKS
@@ -261,24 +284,5 @@ inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_ca
     #error "I2C register callbacks not implemented"
 }
 #else
-
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c)
-{
-    i2c_master_send_isr(hi2c, HAL_STATUS_OK);
-}
-
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c)
-{
-    i2c_master_recv_isr(hi2c, HAL_STATUS_OK);
-}
-
-void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c)
-{
-    if (i2c_it_started_op == I2C_SEND) {
-        i2c_master_send_isr(hi2c, HAL_STATUS_ERROR);
-    } else {
-        i2c_master_recv_isr(hi2c, HAL_STATUS_ERROR);
-    }
-}
 
 #endif
