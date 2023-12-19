@@ -28,6 +28,7 @@ typedef struct {
     /* Wait for slave to acknowledge addressing when starting reading process */
     uint8_t wait_ack;
 } hal_target_pc_i2c_t;
+/** @todo Could use one buffer pointer for both tx and rx */
 
 #define HAL_I2C_TYPEDEF     hal_target_pc_i2c_t*
 #include "hal_i2c.h"
@@ -164,14 +165,31 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
  */
 inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout)
 {
-    hal_status_t ret_status = HAL_STATUS_OK;
-
-    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
-
-    if (HAL_I2C_Master_Receive(i2c, addr < 1, buff, size, timeout) != HAL_OK) {
-        ret_status = HAL_STATUS_ERROR;
+    if (i2c->status != I2C_READY) {
+        return HAL_STATUS_BUSY;
     }
 
+    i2c->status = I2C_RECEIVING;
+    i2c->rx_buf = buff;
+    i2c->byte_count = size;
+
+    uint8_t addressing_byte = (addr < 1) | I2C_READ_BIT;
+    uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
+
+    /* Send the first two bytes and if the amount actually sent is not 2 then return error */
+    if (socket_write(SOCKET_I2C_ID, send_data, 2) != 2) {
+        return HAL_STATUS_ERROR;
+    }
+
+    /* Process should be going on in the background so wait until finished since this function is blocking */
+    /** @todo Implement timeout here */
+    while (i2c->status == I2C_RECEIVING) {}
+
+    hal_status_t ret_status =
+        i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
+    
+    /* Reset I2C for next transfer */
+    i2c->status = I2C_READY;    
     return ret_status;
 }
 
