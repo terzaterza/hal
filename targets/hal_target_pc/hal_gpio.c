@@ -1,4 +1,3 @@
-#include <unistd.h>
 #include "hal_target_pc.h"
 #include "hal_gpio.h"
 
@@ -60,12 +59,13 @@ inline hal_status_t gpio_register_callback(gpio_t gpio, gpio_pin_t pin, callback
  * Socket GPIO message - <VALUE - size in bytes>
  * <PORT_INDEX - 1> <PINS_TO_CHANGE - 2> <PIN_VALUES - 2>
 */
-void peripheral_socket_handle_gpio(int socket)
+void peripheral_socket_handle_gpio()
 {
-    static uint8_t message[1 + 2 + 2];
+    /** @todo Can move receiving port id to peripheral socket and passing as argument */
+    uint8_t message[1 + 2 + 2];
 
     /* Get rest of the message from the socket */
-    read(socket, message, sizeof(message));
+    socket_read(message, sizeof(message));
 
     /* Get port selected by the message */
     if (message[0] >= HAL_GPIO_PORT_COUNT) {

@@ -1,0 +1,231 @@
+#include "hal_target_pc.h"
+#include "hal_i2c.h"
+
+#define I2C_WRITE_BIT           (0)
+#define I2C_READ_BIT            (1)
+
+typedef enum {
+    I2C_READY,
+    I2C_SENDING,
+    I2C_RECEIVING,
+    I2C_FINISHED_OK,
+    I2C_FINISHED_ERROR
+} i2c_status_t;
+
+/* Set before START byte is sent (or received if working as slave) */
+static volatile i2c_status_t i2c_status = I2C_READY;
+/* Pointer to buffer from which data is transmited while i2c_tx_len > 0 (autoincremented) */
+static volatile uint8_t* i2c_tx_buf;
+/* Pointer to where the current received byter should be stored (autoincremented) */
+static volatile uint8_t* i2c_rx_buf;
+/* How many bytes are still to be sent or received */
+static volatile uint8_t i2c_byte_count;
+/* Wait for slave to acknowledge addressing when starting reading process */
+static volatile uint8_t i2c_wait_ack = 1;
+
+/**
+ * Called on receive byte from the socket stream
+ * 
+ * I2C process is always started from the hal function by sending start and addressing bytes
+ * This is then called on slave acknowledge and every sequential byte
+ * 
+ * @note Always receiving one byte at a time
+ * @todo Check for errors every time when using socket_write/read
+*/
+void peripheral_socket_handle_i2c()
+{
+    uint8_t recv;
+
+    /* Receive a byte which was requested (works only for master on I2C) */
+    /** @todo When implementing slave I2C add a way to notify other functions on addressing */
+    socket_read(&recv, 1);
+
+    if (i2c_status == I2C_SENDING) {
+        /* If we are sending then the received byte can (should) only be the acknowledge */
+        /* Else there is an error, so end transfer */
+        if (recv == SOCKET_I2C_ACK) {
+            if (i2c_byte_count > 0) {
+                socket_write(SOCKET_I2C_ID, *i2c_tx_buf, 1);
+                i2c_tx_buf++;
+                i2c_byte_count--;
+            } else {
+                socket_write(SOCKET_I2C_ID, SOCKET_I2C_STOP, 1);
+                i2c_status = I2C_FINISHED_OK;
+                return;
+            }
+        } else {
+            /* can write SOCKET_I2C_STOP here */
+            i2c_status = I2C_FINISHED_ERROR;
+            return;
+        }
+    } else if (i2c_status == I2C_RECEIVING) {
+        if (i2c_wait_ack > 0) {
+            if (recv == SOCKET_I2C_ACK) {
+                /* Now waiting for the first byte of data from the slave so just wait for next packet */
+                return;
+            } else {
+                i2c_status = I2C_FINISHED_ERROR;
+                return;
+            }
+        } else {
+            /* Store received byte to rx buffer */
+            *i2c_rx_buf = recv;
+
+            if (i2c_byte_count > 0) {
+                i2c_byte_count--;
+                i2c_rx_buf++;
+                socket_write(SOCKET_I2C_ID, SOCKET_I2C_ACK, 1);
+            } else {
+                socket_write(SOCKET_I2C_ID, SOCKET_I2C_STOP, 1);
+                i2c_status = I2C_FINISHED_OK;
+                return;
+            }
+        }
+    }
+}
+
+/**
+ * Send <size> bytes via I2C to slave at address <addr>
+ * @retval `HAL_STATUS_OK` if sending completed succesfully
+ * @retval `HAL_STATUS_BUSY` if previous sending operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if sending could not be started or was interrupted
+ * @note Blocking function
+ * @note Implement in hal_i2c.c
+ */
+inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout)
+{
+    if (i2c_status != I2C_READY) {
+        return HAL_STATUS_BUSY;
+    }
+
+    i2c_status = I2C_SENDING;
+    i2c_tx_buf = data;
+    i2c_byte_count = size;
+
+    uint8_t addressing_byte = (addr < 1) | I2C_WRITE_BIT;
+    uint8_t send_data[2] = {SOCKET_I2C_START, addressing_byte};
+
+    if (socket_write(SOCKET_I2C_ID, send_data, 2) != 2) {
+        return HAL_STATUS_ERROR;
+    }
+
+    while (i2c_status == I2C_SENDING) {}
+
+    hal_status_t ret_status = i2c_status == I2C_FINISHED_OK ?
+        HAL_STATUS_OK : HAL_STATUS_ERROR;
+    
+    i2c_status = I2C_READY;
+    
+    return ret_status;
+}
+
+/**
+ * Receive <size> bytes via I2C from slave at address <addr>
+ * @retval `HAL_STATUS_OK` if receiving completed succesfully
+ * @retval `HAL_STATUS_BUSY` if previous receive operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if receiving could not be started or was interrupted
+ * @note Blocking function
+ * @note Implement in hal_i2c.c
+ */
+inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout)
+{
+    hal_status_t ret_status = HAL_STATUS_OK;
+
+    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
+
+    if (HAL_I2C_Master_Receive(i2c, addr < 1, buff, size, timeout) != HAL_OK) {
+        ret_status = HAL_STATUS_ERROR;
+    }
+
+    return ret_status;
+}
+
+/**
+ * Send <size> bytes via I2C to slave at address <addr>
+ * @retval `HAL_STATUS_OK` if sending process was started correctly
+ * @retval `HAL_STATUS_BUSY` if previous sending operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if sending could not be started
+ * @note `data` should not be modified until operation is complete
+ * @note On complete or error `i2c_master_send_isr` is called
+ * @note Implement in hal_i2c.c
+ */
+inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout)
+{
+    UNUSED(timeout);
+    
+    hal_status_t ret_status = HAL_STATUS_OK;
+
+    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
+
+    if (HAL_I2C_Master_Transmit_IT(i2c, addr < 1, data, size) != HAL_OK) {
+        ret_status = HAL_STATUS_ERROR;
+    }
+
+    if (ret_status == HAL_STATUS_OK) {
+        i2c_it_started_op = I2C_SEND;
+    }
+
+    return ret_status;
+}
+
+/**
+ * Enable receiving <size> bytes via I2C from slave at address <addr>
+ * @retval `HAL_STATUS_OK` if receiving process was started correctly
+ * @retval `HAL_STATUS_BUSY` if previous receive operation is ongoing
+ * @retval `HAL_STATUS_ERROR` if receiving could not be started
+ * @note On complete or error `i2c_master_recv_isr` is called
+ * @note Implement in hal_i2c.c
+ */
+inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout)
+{
+    UNUSED(timeout);
+    
+    hal_status_t ret_status = HAL_STATUS_OK;
+
+    /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
+
+    if (HAL_I2C_Master_Receive_IT(i2c, addr < 1, buff, size) != HAL_OK) {
+        ret_status = HAL_STATUS_ERROR;
+    }
+
+    if (ret_status == HAL_STATUS_OK) {
+        i2c_it_started_op = I2C_RECV;
+    }
+
+    return ret_status;
+}
+
+#ifdef HAL_I2C_USE_REGISTER_CALLBACKS
+/**
+ * Register a callback for I2C event
+ * @retval `HAL_STATUS_OK` callback registered successfully
+ * @retval `HAL_STATUS_ERROR` callback registration failed
+ * @note Implement in hal_i2c.c
+ * @note Multiple registrations should override the last one
+*/
+inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_callback_src_t src)
+{
+    #error "I2C register callbacks not implemented"
+}
+#else
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c)
+{
+    i2c_master_send_isr(hi2c, HAL_STATUS_OK);
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c)
+{
+    i2c_master_recv_isr(hi2c, HAL_STATUS_OK);
+}
+
+void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c)
+{
+    if (i2c_it_started_op == I2C_SEND) {
+        i2c_master_send_isr(hi2c, HAL_STATUS_ERROR);
+    } else {
+        i2c_master_recv_isr(hi2c, HAL_STATUS_ERROR);
+    }
+}
+
+#endif
