@@ -1,8 +1,11 @@
 #include "hal_target_pc.h"
-#include "hal_i2c.h"
 
-#define I2C_WRITE_BIT           (0)
-#define I2C_READ_BIT            (1)
+#define I2C_WRITE_BIT       (0)
+#define I2C_READ_BIT        (1)
+#define I2C_START_BYTE      0x5a
+#define I2C_STOP_BYTE       0xa5
+#define I2C_ACK_BYTE        0xaa
+// #define SOCKET_I2C_NACK     0x55
 
 typedef enum {
     I2C_READY,
@@ -12,72 +15,101 @@ typedef enum {
     I2C_FINISHED_ERROR
 } i2c_status_t;
 
-/* Set before START byte is sent (or received if working as slave) */
-static volatile i2c_status_t i2c_status = I2C_READY;
-/* Pointer to buffer from which data is transmited while i2c_tx_len > 0 (autoincremented) */
-static volatile uint8_t* i2c_tx_buf;
-/* Pointer to where the current received byter should be stored (autoincremented) */
-static volatile uint8_t* i2c_rx_buf;
-/* How many bytes are still to be sent or received */
-static volatile uint8_t i2c_byte_count;
-/* Wait for slave to acknowledge addressing when starting reading process */
-static volatile uint8_t i2c_wait_ack = 1;
+/** @note volatile variables might be needed */
+typedef struct {
+    /* Set before START byte is sent (or received if working as slave) */
+    i2c_status_t status;
+    /* Pointer to buffer from which data is transmited while i2c_tx_len > 0 (autoincremented) */
+    uint8_t* tx_buf;
+    /* Pointer to where the current received byter should be stored (autoincremented) */
+    uint8_t* rx_buf;
+    /* How many bytes are still to be sent or received */
+    uint16_t byte_count;
+    /* Wait for slave to acknowledge addressing when starting reading process */
+    uint8_t wait_ack;
+} hal_target_pc_i2c_t;
+
+#define HAL_I2C_TYPEDEF     hal_target_pc_i2c_t*
+#include "hal_i2c.h"
 
 /**
- * Called on receive byte from the socket stream
+ * Virtual I2C peripherals
+ * 
+ * @note Could rename
+*/
+static hal_target_pc_i2c_t i2c_structs[TARGET_PC_I2C_COUNT];
+
+/**
+ * Called on receive `SOCKET_I2C_ID` from the socket stream
  * 
  * I2C process is always started from the hal function by sending start and addressing bytes
  * This is then called on slave acknowledge and every sequential byte
+ * 
+ * Socket I2C message - <VALUE - size in bytes>
+ * <I2C_STRUCT_INDEX - 1> <DATA BYTE - 1>
  * 
  * @note Always receiving one byte at a time
  * @todo Check for errors every time when using socket_write/read
 */
 void peripheral_socket_handle_i2c()
 {
-    uint8_t recv;
+    uint8_t message[2];
+    socket_read(message, 2);
 
-    /* Receive a byte which was requested (works only for master on I2C) */
+    /* Refer to I2C selected by the message */
+    if (message[0] >= TARGET_PC_I2C_COUNT) {
+        /** @todo Could return error here */
+        return;
+    }
+    i2c_t i2c = i2c_structs + message[0];
+
+    /* Receive a byte which was requested (since currently implementing only for master on I2C) */
     /** @todo When implementing slave I2C add a way to notify other functions on addressing */
-    socket_read(&recv, 1);
+    uint8_t recv = message[1];
 
-    if (i2c_status == I2C_SENDING) {
+    if (i2c->status == I2C_SENDING) {
         /* If we are sending then the received byte can (should) only be the acknowledge */
         /* Else there is an error, so end transfer */
-        if (recv == SOCKET_I2C_ACK) {
-            if (i2c_byte_count > 0) {
-                socket_write(SOCKET_I2C_ID, *i2c_tx_buf, 1);
-                i2c_tx_buf++;
-                i2c_byte_count--;
+        if (recv == I2C_ACK_BYTE) {
+            if (i2c->byte_count > 0) {
+                socket_write(SOCKET_I2C_ID, i2c->tx_buf, 1);
+                i2c->tx_buf++;
+                i2c->byte_count--;
             } else {
-                socket_write(SOCKET_I2C_ID, SOCKET_I2C_STOP, 1);
-                i2c_status = I2C_FINISHED_OK;
+                socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
+                i2c->status = I2C_FINISHED_OK;
                 return;
             }
         } else {
-            /* can write SOCKET_I2C_STOP here */
-            i2c_status = I2C_FINISHED_ERROR;
+            /* Received byte was not an acknowledge so end transfer */
+            socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
+            i2c->status = I2C_FINISHED_ERROR;
             return;
         }
-    } else if (i2c_status == I2C_RECEIVING) {
-        if (i2c_wait_ack > 0) {
-            if (recv == SOCKET_I2C_ACK) {
+    } else if (i2c->status == I2C_RECEIVING) {
+        if (i2c->wait_ack > 0) {
+            if (recv == I2C_ACK_BYTE) {
                 /* Now waiting for the first byte of data from the slave so just wait for next packet */
                 return;
             } else {
-                i2c_status = I2C_FINISHED_ERROR;
+                /* Received byte was not an acknowledge so end transfer */
+                socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
+                i2c->status = I2C_FINISHED_ERROR;
                 return;
             }
         } else {
             /* Store received byte to rx buffer */
-            *i2c_rx_buf = recv;
+            *(i2c->rx_buf) = recv;
 
-            if (i2c_byte_count > 0) {
-                i2c_byte_count--;
-                i2c_rx_buf++;
-                socket_write(SOCKET_I2C_ID, SOCKET_I2C_ACK, 1);
+            if (i2c->byte_count > 0) {
+                /* There is more bytes to receive */
+                i2c->byte_count--;
+                i2c->rx_buf++;
+                socket_write_byte(SOCKET_I2C_ID, I2C_ACK_BYTE);
             } else {
-                socket_write(SOCKET_I2C_ID, SOCKET_I2C_STOP, 1);
-                i2c_status = I2C_FINISHED_OK;
+                /* Reading process completed successfully */
+                socket_write_byte(SOCKET_I2C_ID, I2C_STOP_BYTE);
+                i2c->status = I2C_FINISHED_OK;
                 return;
             }
         }
@@ -94,28 +126,31 @@ void peripheral_socket_handle_i2c()
  */
 inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout)
 {
-    if (i2c_status != I2C_READY) {
+    if (i2c->status != I2C_READY) {
         return HAL_STATUS_BUSY;
     }
 
-    i2c_status = I2C_SENDING;
-    i2c_tx_buf = data;
-    i2c_byte_count = size;
+    i2c->status = I2C_SENDING;
+    i2c->tx_buf = data;
+    i2c->byte_count = size;
 
     uint8_t addressing_byte = (addr < 1) | I2C_WRITE_BIT;
-    uint8_t send_data[2] = {SOCKET_I2C_START, addressing_byte};
+    uint8_t send_data[2] = {I2C_START_BYTE, addressing_byte};
 
+    /* Send the first two bytes and if the amount actually sent is not 2 then return error */
     if (socket_write(SOCKET_I2C_ID, send_data, 2) != 2) {
         return HAL_STATUS_ERROR;
     }
 
-    while (i2c_status == I2C_SENDING) {}
+    /* Process should be going on in the background so wait until finished since this function is blocking */
+    /** @todo Implement timeout here */
+    while (i2c->status == I2C_SENDING) {}
 
-    hal_status_t ret_status = i2c_status == I2C_FINISHED_OK ?
-        HAL_STATUS_OK : HAL_STATUS_ERROR;
+    hal_status_t ret_status =
+        i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
     
-    i2c_status = I2C_READY;
-    
+    /* Reset I2C for next transfer */
+    i2c->status = I2C_READY;    
     return ret_status;
 }
 

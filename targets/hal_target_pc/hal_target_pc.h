@@ -9,25 +9,20 @@
 #define SOCKET_I2C_ID   1
 #define SOCKET_UART_ID  2
 #define SOCKET_TIMER_ID 3
+/** @todo Change ids to enum */
+
+#define TARGET_PC_GPIO_PORT_COUNT     8
+#define TARGET_PC_I2C_COUNT           4
 
 #define HAL_GPIO_16BIT
-#define HAL_GPIO_PORT_TYPEDEF   hal_target_pc_gpio_t*
-#define HAL_GPIO_PORT_COUNT     8
-
-#define SOCKET_I2C_START    0x5a
-#define SOCKET_I2C_STOP     0xa5
-#define SOCKET_I2C_ACK      0xaa
-// #define SOCKET_I2C_NACK     0x55
 
 int socket_read(void* buffer, size_t size);
 int socket_write(uint8_t periph_id, const void* data, size_t size);
 
-typedef struct {
-    uint16_t in_reg;
-    uint16_t out_reg;
-    uint16_t dir; /* not used currently since hal doesn't have options to set pin dir */
-    uint16_t intr; /* used to check which pin triggers an interrupt */
-    uint16_t intr_edge; /* which edge for each pin triggers an interrupt (0 - falling, 1 - rising) */
-} hal_target_pc_gpio_t;
+static int socket_write_byte(uint8_t periph_id, uint8_t data)
+{
+    uint8_t temp = data; /* could replace with &data */
+    return socket_write(periph_id, &temp, 1);
+}
 
 #endif
