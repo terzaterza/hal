@@ -11,8 +11,9 @@
 #define SOCKET_TIMER_ID 3
 /** @todo Change ids to enum */
 
-#define TARGET_PC_GPIO_PORT_COUNT     8
-#define TARGET_PC_I2C_COUNT           4
+#define TARGET_PC_GPIO_PORT_COUNT   8
+#define TARGET_PC_I2C_COUNT         4
+#define TARGET_PC_UART_COUNT        4
 
 #define HAL_GPIO_16BIT
 
