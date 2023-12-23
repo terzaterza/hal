@@ -1,32 +1,8 @@
 #include "hal_target_pc.h"
+#include "hal_uart.h"
 
 #define UART_START_BYTE     0x5a
 #define UART_STOP_BYTE      0xa5
-
-typedef struct {
-    /* Parity mode - 0=None, 1=Odd, 2=Even */
-    uint8_t parity;
-    /* Number of stop bits */
-    uint8_t stop_bits;
-    // uart_baud_t baud_rate; - not used currently
-    /* Pointers to send/receive buffers (autoincremented) */
-    uint8_t* tx_buf;
-    uint8_t* rx_buf;
-    /* Number of bytes left to send/receive */
-    uint16_t tx_count;
-    uint16_t rx_count;
-    /* Should ISR be called on complete or if error */
-    uint8_t int_mode;
-    /** @todo Add registrable callbacks here*/
-} hal_target_pc_uart_t;
-
-#define HAL_UART_TYPEDEF    hal_target_pc_uart_t*
-#include "hal_uart.h"
-
-/**
- * Virtual UART peripherals
-*/
-static hal_target_pc_uart_t uart_structs[TARGET_PC_UART_COUNT];
 
 /**
  * Called on receive `SOCKET_UART_ID` from the socket stream
@@ -35,20 +11,12 @@ static hal_target_pc_uart_t uart_structs[TARGET_PC_UART_COUNT];
  * Sending is handled through hal functions
  * 
  * Socket UART message
- * <UART_STRUCT_INDEX - 1> <UART_START_BYTE - 1> <DATA - 1> [PARITY - 1] <UART_STOP_BYTE - 1 (2)>
+ * <UART_START_BYTE - 1> <DATA - 1> [PARITY - 1] <UART_STOP_BYTE - 1 (2)>
 */
-void peripheral_socket_handle_uart()
+void peripheral_socket_handle_uart(hal_target_pc_uart_t* uart)
 {
     /* Max message size if using > 1 stop bits and parity */
-    uint8_t message[1 + 1 + 1 + 1 + 2];
-    /* Read uart index to get settings */
-    socket_read(message, 1);
-
-    /* Get UART peripheral */
-    if (message[0] >= TARGET_PC_UART_COUNT) {
-        return;
-    }
-    uart_t uart = uart_structs + message[0];
+    uint8_t message[1 + 1 + 1 + 2];
 
     /* Compute how many bytes to receive based on settings */
     uint8_t recv_len = 2; /* START and DATA byte */
@@ -58,15 +26,15 @@ void peripheral_socket_handle_uart()
     recv_len += uart->stop_bits;
 
     /* Get the rest of the message */
-    socket_read(message + 1, recv_len);
+    socket_read(SOCKET_PERIPH_UART, uart->id, message, recv_len);
 
     /* Check for starting byte */
-    if (message[1] != UART_START_BYTE) {
+    if (message[0] != UART_START_BYTE) {
         return; // error
     }
 
     /* Store received data */
-    *(uart->rx_buf++) = message[2];
+    *(uart->rx_buf++) = message[1];
     uart->rx_count--;
 
     if (uart->parity > 0) {
@@ -75,7 +43,7 @@ void peripheral_socket_handle_uart()
 
     /* Check stop bits */
     for (uint8_t i = 0; i < uart->stop_bits; i++) {
-        if (message[i + 3 + (uart->parity > 0)] != UART_STOP_BYTE) {
+        if (message[2 + (uart->parity > 0) + i] != UART_STOP_BYTE) {
             return; // error
         }
     }
@@ -95,15 +63,18 @@ void peripheral_socket_handle_uart()
  */
 inline hal_status_t uart_send(uart_t uart, uint8_t* data, uint16_t size, uint16_t timeout)
 {
-    hal_status_t ret_status = HAL_STATUS_OK;
+    /* UART should never be busy since only using socket_write, so no need to check */
 
-    /** @todo Check if uart is busy and return HAL_STATUS_BUSY if true */
+    /* Setting tx_count to 0, since all bytes are always sent at once */
+    uart->tx_count = 0;
+    uart->int_mode = 0;
 
-    if (HAL_UART_Transmit(uart, data, size, timeout) != HAL_OK) {
-        ret_status = HAL_STATUS_ERROR;
+    /* Sending successful only if all bytes sent successfully */
+    if (socket_write(SOCKET_PERIPH_UART, uart->id, data, size) != size) {
+        return HAL_STATUS_ERROR;
     }
 
-    return ret_status;
+    return HAL_STATUS_OK;
 }
 
 /**
