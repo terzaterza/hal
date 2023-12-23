@@ -1,20 +1,5 @@
 #include "hal_target_pc.h"
-
-typedef struct {
-    uint16_t in_reg;
-    uint16_t out_reg;
-    uint16_t dir; /* not used currently since hal doesn't have options to set pin dir */
-    uint16_t intr; /* used to check which pin triggers an interrupt */
-    uint16_t intr_edge; /* which edge for each pin triggers an interrupt (0 - falling, 1 - rising) */
-} hal_target_pc_gpio_t;
-
-#define HAL_GPIO_PORT_TYPEDEF   hal_target_pc_gpio_t*
 #include "hal_gpio.h"
-
-/**
- * Virtual GPIO peripherals
-*/
-static hal_target_pc_gpio_t gpio_port[TARGET_PC_GPIO_PORT_COUNT];
 
 /**
  * Read gpio port
@@ -70,28 +55,21 @@ inline hal_status_t gpio_register_callback(gpio_t gpio, gpio_pin_t pin, callback
  * Called if the first byte from the socket stream was SOCKET_GPIO_ID
  * 
  * Socket GPIO message - <VALUE - size in bytes>
- * <PORT_INDEX - 1> <PINS_TO_CHANGE - 2> <PIN_VALUES - 2>
+ * <PINS_TO_CHANGE - 2> <PIN_VALUES - 2>
 */
-void peripheral_socket_handle_gpio()
+void peripheral_socket_handle_gpio(hal_target_pc_gpio_t* port)
 {
-    /** @todo Can move receiving port id to peripheral socket and passing as argument */
-    uint8_t message[1 + 2 + 2];
+    uint8_t message[2 + 2];
 
     /* Get rest of the message from the socket */
-    socket_read(message, sizeof(message));
-
-    /* Get port selected by the message */
-    if (message[0] >= TARGET_PC_GPIO_PORT_COUNT) {
-        return;
-    }
-    gpio_port_t port = gpio_port + message[0];
+    socket_read(SOCKET_PERIPH_GPIO, port->id, message, sizeof(message));
 
     /* Get which pins are being changed */
     /** @todo & pins with port->dir to only affect input regs */
-    gpio_pin_t pins = *(gpio_pin_t*)(message + 1);
+    gpio_pin_t pins = *(gpio_pin_t*)(message + 0);
 
     /* Get new values for the input register */
-    gpio_pin_t values = *(gpio_pin_t*)(message + 3);
+    gpio_pin_t values = *(gpio_pin_t*)(message + 2);
 
     /* Check for pin state changes trigger interrupts if enabled */
     gpio_pin_t diff = (port->in_reg ^ values) & pins;
