@@ -1,6 +1,5 @@
 /**
  * Virtual Com Port implementation
- * Replacement for printf and scanf functions
 */
 
 #ifndef HAL_VCP_H
