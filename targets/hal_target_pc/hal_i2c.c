@@ -21,14 +21,15 @@
  * @note Always receiving one byte at a time
  * @todo Check for errors every time when using socket_write/read
 */
-void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c)
+void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c, uint8_t* msg, uint16_t len)
 {
+    /* Can return here if length of the message is not what is expected (1) */
+    
     /* Receive a byte which was requested (since currently implementing only for master on I2C) */
     /** @todo When implementing slave I2C add a way to notify other functions on addressing */
-    uint8_t recv;
-    socket_read(SOCKET_PERIPH_I2C, i2c->id, &recv, 1);
+    uint8_t recv = msg[0];
 
-    if (i2c->status == I2C_SENDING) {
+    if (i2c->status == SP_SENDING) {
         /* If we are sending then the received byte can (should) only be the acknowledge */
         /* Else there is an error, so end transfer */
         if (recv == I2C_ACK_BYTE) {
@@ -38,20 +39,20 @@ void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c)
                 i2c->byte_count--;
             } else {
                 socket_write_byte(SOCKET_PERIPH_I2C, i2c->id, I2C_STOP_BYTE);
-                i2c->status = I2C_FINISHED_OK;
+                i2c->status = SP_FINISHED_OK;
             }
         } else {
             /* Received byte was not an acknowledge so end transfer */
             socket_write_byte(SOCKET_PERIPH_I2C, i2c->id, I2C_STOP_BYTE);
-            i2c->status = I2C_FINISHED_ERROR;
+            i2c->status = SP_FINISHED_ERROR;
         }
 
         /* If in interrupt mode, auto-reset I2C to be ready for next send */
-        if (i2c->status != I2C_SENDING && i2c->int_mode == 1) {
-            i2c->status = I2C_READY;
-            i2c_master_send_isr(i2c, i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
+        if (i2c->status != SP_SENDING && i2c->int_mode == 1) {
+            i2c->status = SP_READY;
+            i2c_master_send_isr(i2c, i2c->status == SP_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
         }
-    } else if (i2c->status == I2C_RECEIVING) {
+    } else if (i2c->status == SP_RECEIVING) {
         if (i2c->wait_ack > 0) {
             if (recv == I2C_ACK_BYTE) {
                 /* Now waiting for the first byte of data from the slave so just wait for next packet */
@@ -59,7 +60,7 @@ void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c)
             } else {
                 /* Received byte was not an acknowledge so end transfer */
                 socket_write_byte(SOCKET_PERIPH_I2C, i2c->id, I2C_STOP_BYTE);
-                i2c->status = I2C_FINISHED_ERROR;
+                i2c->status = SP_FINISHED_ERROR;
             }
         } else {
             /* Store received byte to rx buffer */
@@ -73,14 +74,15 @@ void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c)
             } else {
                 /* Reading process completed successfully */
                 socket_write_byte(SOCKET_PERIPH_I2C, i2c->id, I2C_STOP_BYTE);
-                i2c->status = I2C_FINISHED_OK;
+                i2c->status = SP_FINISHED_OK;
             }
         }
         
         /* If in interrupt mode, auto-reset I2C to be ready for next send */
-        if (i2c->status != I2C_RECEIVING && i2c->int_mode == 1) {
-            i2c->status = I2C_READY;
-            i2c_master_recv_isr(i2c, i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
+        if (i2c->status != SP_RECEIVING && i2c->int_mode == 1) {
+            serial_port_status_t i2c_status = i2c->status;
+            i2c->status = SP_READY;
+            i2c_master_recv_isr(i2c, i2c_status == SP_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR);
         }
     }
 }
@@ -95,11 +97,11 @@ void peripheral_socket_handle_i2c(hal_target_pc_i2c_t* i2c)
  */
 inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout)
 {
-    if (i2c->status != I2C_READY) {
+    if (i2c->status != SP_READY) {
         return HAL_STATUS_BUSY;
     }
 
-    i2c->status = I2C_SENDING;
+    i2c->status = SP_SENDING;
     i2c->tx_buf = data;
     i2c->byte_count = size;
     i2c->int_mode = 0;
@@ -114,13 +116,13 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
 
     /* Process should be going on in the background so wait until finished since this function is blocking */
     /** @todo Implement timeout here */
-    while (i2c->status == I2C_SENDING) {}
+    while (i2c->status == SP_SENDING) {}
 
     hal_status_t ret_status =
-        i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
+        i2c->status == SP_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
     
     /* Reset I2C for next transfer */
-    i2c->status = I2C_READY;    
+    i2c->status = SP_READY;    
     return ret_status;
 }
 
@@ -134,11 +136,11 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
  */
 inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout)
 {
-    if (i2c->status != I2C_READY) {
+    if (i2c->status != SP_READY) {
         return HAL_STATUS_BUSY;
     }
 
-    i2c->status = I2C_RECEIVING;
+    i2c->status = SP_RECEIVING;
     i2c->rx_buf = buff;
     i2c->byte_count = size;
     i2c->int_mode = 0;
@@ -153,13 +155,13 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
 
     /* Process should be going on in the background so wait until finished since this function is blocking */
     /** @todo Implement timeout here */
-    while (i2c->status == I2C_RECEIVING) {}
+    while (i2c->status == SP_RECEIVING) {}
 
     hal_status_t ret_status =
-        i2c->status == I2C_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
+        i2c->status == SP_FINISHED_OK ? HAL_STATUS_OK : HAL_STATUS_ERROR;
     
     /* Reset I2C for next transfer */
-    i2c->status = I2C_READY;    
+    i2c->status = SP_READY;    
     return ret_status;
 }
 
@@ -176,11 +178,11 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
 {
     UNUSED(timeout);
     
-    if (i2c->status != I2C_READY) {
+    if (i2c->status != SP_READY) {
         return HAL_STATUS_BUSY;
     }
 
-    i2c->status = I2C_SENDING;
+    i2c->status = SP_SENDING;
     i2c->tx_buf = data;
     i2c->byte_count = size;
     i2c->int_mode = 1;
@@ -208,11 +210,11 @@ inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, 
 {
     UNUSED(timeout);
     
-    if (i2c->status != I2C_READY) {
+    if (i2c->status != SP_READY) {
         return HAL_STATUS_BUSY;
     }
 
-    i2c->status = I2C_RECEIVING;
+    i2c->status = SP_RECEIVING;
     i2c->rx_buf = buff;
     i2c->byte_count = size;
     i2c->int_mode = 1;

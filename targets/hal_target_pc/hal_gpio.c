@@ -17,6 +17,7 @@ inline gpio_pin_t gpio_port_read(gpio_port_t port)
 inline void gpio_port_set(gpio_port_t port, gpio_pin_t pins)
 {
     port->out_reg |= pins;
+    socket_write(SOCKET_PERIPH_GPIO, port->id, &port->out_reg, sizeof(port->out_reg));
 }
 
 /**
@@ -26,6 +27,7 @@ inline void gpio_port_set(gpio_port_t port, gpio_pin_t pins)
 inline void gpio_port_clear(gpio_port_t port, gpio_pin_t pins)
 {
     port->out_reg &= ~pins;
+    socket_write(SOCKET_PERIPH_GPIO, port->id, &port->out_reg, sizeof(port->out_reg));
 }
 
 /**
@@ -35,6 +37,7 @@ inline void gpio_port_clear(gpio_port_t port, gpio_pin_t pins)
 inline void gpio_port_toggle(gpio_port_t port, gpio_pin_t pins)
 {
     port->out_reg ^= pins;
+    socket_write(SOCKET_PERIPH_GPIO, port->id, &port->out_reg, sizeof(port->out_reg));
 }
 
 #ifdef HAL_GPIO_USE_REGISTER_CALLBACKS
@@ -57,12 +60,9 @@ inline hal_status_t gpio_register_callback(gpio_t gpio, gpio_pin_t pin, callback
  * Socket GPIO message - <VALUE - size in bytes>
  * <PINS_TO_CHANGE - 2> <PIN_VALUES - 2>
 */
-void peripheral_socket_handle_gpio(hal_target_pc_gpio_t* port)
+void peripheral_socket_handle_gpio(hal_target_pc_gpio_t* port, uint8_t* message, uint16_t len)
 {
-    uint8_t message[2 + 2];
-
-    /* Get rest of the message from the socket */
-    socket_read(SOCKET_PERIPH_GPIO, port->id, message, sizeof(message));
+    /* Can return here if len != expected length (2 + 2 = 4) */
 
     /* Get which pins are being changed */
     /** @todo & pins with port->dir to only affect input regs */
@@ -71,9 +71,9 @@ void peripheral_socket_handle_gpio(hal_target_pc_gpio_t* port)
     /* Get new values for the input register */
     gpio_pin_t values = *(gpio_pin_t*)(message + 2);
 
-    /* Check for pin state changes trigger interrupts if enabled */
+    /* Check for pin state changes and trigger interrupts if enabled */
     gpio_pin_t diff = (port->in_reg ^ values) & pins;
-    gpio_pin_t triggers = ~(values ^ port->intr_edge) & diff & port->intr;
+    gpio_pin_t triggers = (~(values ^ port->intr_edge)) & diff & port->intr;
 
     /* Update port input register */
     port->in_reg |= values & pins;
