@@ -17,6 +17,6 @@
 #define HAL_I2C_TYPEDEF         I2C_HandleTypeDef*
 #define HAL_UART_TYPEDEF        UART_HandleTypeDef*
 #define HAL_TIMER_TYPEDEF       TIM_HandleTypeDef*
-#define HAL_VCP_USE_USB
+#define HAL_ADC_TYPEDEF         ADC_HandleTypeDef*
 
 #endif

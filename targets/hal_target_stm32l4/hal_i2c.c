@@ -22,7 +22,7 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
 
     /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
 
-    if (HAL_I2C_Master_Transmit(i2c, addr < 1, data, size, timeout) != HAL_OK) {
+    if (HAL_I2C_Master_Transmit(i2c, addr << 1, data, size, timeout) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
 
@@ -43,7 +43,7 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
 
     /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
 
-    if (HAL_I2C_Master_Receive(i2c, addr < 1, buff, size, timeout) != HAL_OK) {
+    if (HAL_I2C_Master_Receive(i2c, addr << 1, buff, size, timeout) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
 
@@ -67,7 +67,7 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
 
     /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
 
-    if (HAL_I2C_Master_Transmit_IT(i2c, addr < 1, data, size) != HAL_OK) {
+    if (HAL_I2C_Master_Transmit_IT(i2c, addr << 1, data, size) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
 
@@ -94,7 +94,7 @@ inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, 
 
     /** @todo Check if i2c is busy and return HAL_STATUS_BUSY if true */
 
-    if (HAL_I2C_Master_Receive_IT(i2c, addr < 1, buff, size) != HAL_OK) {
+    if (HAL_I2C_Master_Receive_IT(i2c, addr << 1, buff, size) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
 

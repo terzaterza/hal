@@ -20,8 +20,8 @@ inline hal_status_t timer_set_mode(timer_t timer, timer_count_mode_t timer_mode)
 */
 inline hal_status_t timer_set_period(timer_t timer, timer_count_t period)
 {
-    /** @todo Implement */
-    return HAL_STATUS_ERROR;
+    __HAL_TIM_SET_AUTORELOAD(timer, period);
+    return HAL_STATUS_OK;
 }
 
 /**
