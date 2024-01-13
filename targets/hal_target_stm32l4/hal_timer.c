@@ -20,7 +20,7 @@ inline hal_status_t timer_set_mode(timer_t timer, timer_count_mode_t timer_mode)
 */
 inline hal_status_t timer_set_period(timer_t timer, timer_count_t period)
 {
-    __HAL_TIM_SET_AUTORELOAD(timer, period);
+    __HAL_TIM_SET_AUTORELOAD(timer, period-1);
     return HAL_STATUS_OK;
 }
 

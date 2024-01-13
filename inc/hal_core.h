@@ -1,6 +1,14 @@
 #ifndef HAL_CORE_H
 #define HAL_CORE_H
 
+#if defined(HAL_TARGET_PC)
+#include "hal_target_pc.h"
+#elif defined(HAL_TARGET_STM32F4)
+#include "hal_target_stm32f4.h"
+#elif defined(HAL_TARGET_STM32L4)
+#include "hal_target_stm32l4.h"
+#endif
+
 /**
  * Get HAL resource (gpio, i2c, uart,...) by name
  * Requires user to define what this resource is by using `HAL_SET_RESOURCE`
@@ -24,7 +32,9 @@
 /**
  * Remove compiler warnings for unused function arguments
 */
+#ifndef UNUSED
 #define UNUSED(x)				(void)x
+#endif
 
 /**
  * Define hal types as `void*` so apps can be written while target not specified

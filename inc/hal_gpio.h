@@ -17,23 +17,6 @@
 	typedef uint8_t gpio_pin_t;
 #endif
 
-#define GPIO_PIN_0	(gpio_pin_t)(0x1)
-#define GPIO_PIN_1	(gpio_pin_t)(0x2)
-#define GPIO_PIN_2	(gpio_pin_t)(0x4)
-#define GPIO_PIN_3	(gpio_pin_t)(0x8)
-#define GPIO_PIN_4	(gpio_pin_t)(0x10)
-#define GPIO_PIN_5	(gpio_pin_t)(0x20)
-#define GPIO_PIN_6	(gpio_pin_t)(0x40)
-#define GPIO_PIN_7	(gpio_pin_t)(0x80)
-#define GPIO_PIN_8	(gpio_pin_t)(0x100)
-#define GPIO_PIN_9	(gpio_pin_t)(0x200)
-#define GPIO_PIN_10	(gpio_pin_t)(0x400)
-#define GPIO_PIN_11	(gpio_pin_t)(0x800)
-#define GPIO_PIN_12	(gpio_pin_t)(0x1000)
-#define GPIO_PIN_13	(gpio_pin_t)(0x2000)
-#define GPIO_PIN_14	(gpio_pin_t)(0x4000)
-#define GPIO_PIN_15	(gpio_pin_t)(0x8000)
-
 /**
  * Read gpio port
  * @note Implement in hal_gpio.c

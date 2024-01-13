@@ -28,6 +28,11 @@ inline hal_status_t adc_stop_dma(adc_t adc);
 */
 inline hal_status_t adc_set_channels(adc_t adc, uint8_t* channels, uint8_t n_channels);
 
+/**
+ * Read the end of sequence conversion status flag
+*/
+inline uint8_t adc_read_eos_flag(adc_t adc);
+
 #ifdef HAL_ADC_USE_REGISTER_CALLBACKS
 /**
  * Register a callback for ADC event

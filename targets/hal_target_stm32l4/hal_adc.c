@@ -59,6 +59,14 @@ inline hal_status_t adc_set_channels(adc_t adc, uint8_t* channels, uint8_t n_cha
     return ret_status;
 }
 
+/**
+ * Read the end of sequence conversion status flag
+*/
+inline uint8_t adc_read_eos_flag(adc_t adc)
+{
+    return __HAL_ADC_GET_FLAG(adc, ADC_FLAG_EOS) != 0;
+}
+
 #ifdef HAL_ADC_USE_REGISTER_CALLBACKS
 /**
  * Register a callback for ADC event
