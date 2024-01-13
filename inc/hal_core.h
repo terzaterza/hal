@@ -39,7 +39,7 @@
 /**
  * Define hal types as `void*` so apps can be written while target not specified
 */
-#define __TEMPLATE_TYPEDEF(x)		typedef void* x
+#define __HAL_TEMPLATE_TYPEDEF(x)		typedef void* x
 
 typedef enum {
 	HAL_STATUS_OK,

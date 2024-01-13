@@ -6,7 +6,7 @@
 
 #ifndef HAL_GPIO_PORT_TYPEDEF
 	#error "HAL_GPIO_PORT_TYPEDEF not defined"
-	__TEMPLATE_TYPEDEF(gpio_port_t);
+	__HAL_TEMPLATE_TYPEDEF(gpio_port_t);
 #else
 	typedef HAL_GPIO_PORT_TYPEDEF gpio_port_t;
 #endif
@@ -21,25 +21,25 @@
  * Read gpio port
  * @note Implement in hal_gpio.c
  */
-inline gpio_pin_t gpio_port_read(gpio_port_t port);
+gpio_pin_t gpio_port_read(gpio_port_t port);
 
 /**
  * Set GPIO pins to 1
  * @note Implement in hal_gpio.c
  */
-inline void gpio_port_set(gpio_port_t port, gpio_pin_t pins);
+void gpio_port_set(gpio_port_t port, gpio_pin_t pins);
 
 /**
  * Set GPIO pins to 0
  * @note Implement in hal_gpio.c
  */
-inline void gpio_port_clear(gpio_port_t port, gpio_pin_t pins);
+void gpio_port_clear(gpio_port_t port, gpio_pin_t pins);
 
 /**
  * Toggle GPIO pins
  * @note Implement in hal_gpio.c
  */
-inline void gpio_port_toggle(gpio_port_t port, gpio_pin_t pins);
+void gpio_port_toggle(gpio_port_t port, gpio_pin_t pins);
 
 #ifdef HAL_GPIO_USE_REGISTER_CALLBACKS
 /**
@@ -49,13 +49,13 @@ inline void gpio_port_toggle(gpio_port_t port, gpio_pin_t pins);
  * @note Implement in hal_gpio.c
  * @note Multiple registrations should override the last one
 */
-inline hal_status_t gpio_register_callback(gpio_t gpio, gpio_pin_t pin, callback_t callback);
+hal_status_t gpio_register_callback(gpio_t gpio, gpio_pin_t pin, callback_t callback);
 #else
 /**
  * GPIO external interrupt ISR
  * @note This function should be called from lower level (driver's) ISR in the hal_gpio.c
  */
-inline void gpio_exti_isr(gpio_port_t port, gpio_pin_t pin);
+void gpio_exti_isr(gpio_port_t port, gpio_pin_t pin);
 #endif
 
 #endif /* HAL_GPIO_H */

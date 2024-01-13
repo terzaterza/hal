@@ -12,7 +12,7 @@
  * @retval `HAL_STATUS_OK` - message sent successfully
  * @retval `HAL_STATUS_ERROR` - error during communication
 */
-inline hal_status_t io_putdata(const uint8_t* buffer, uint16_t len);
+hal_status_t io_putdata(const uint8_t* buffer, uint16_t len);
 
 /**
  * Receive `len` bytes of data and store starting at `buffer`
@@ -22,7 +22,7 @@ inline hal_status_t io_putdata(const uint8_t* buffer, uint16_t len);
  * @retval `HAL_STATUS_OK` - message sent successfully
  * @retval `HAL_STATUS_ERROR` - error during communication
 */
-inline hal_status_t io_getdata(uint8_t* buffer, uint16_t len);
+hal_status_t io_getdata(uint8_t* buffer, uint16_t len);
 
 /**
  * Replacement for stdio printf
@@ -32,21 +32,21 @@ inline hal_status_t io_getdata(uint8_t* buffer, uint16_t len);
  * @retval `HAL_STATUS_OK` - message sent successfully
  * @retval `HAL_STATUS_ERROR` - message larger than transmit buffer or error during communication
 */
-inline hal_status_t io_printf(const char* format, ...);
+hal_status_t io_printf(const char* format, ...);
 
 /**
  * Replacement for stdio scanf
 */
-inline hal_status_t io_scanf(const char* format, ...);
+hal_status_t io_scanf(const char* format, ...);
 
 /**
  * Replacement for putchar
 */
-inline hal_status_t io_putchar(const char c);
+hal_status_t io_putchar(const char c);
 
 /**
  * Replacement for getchar
 */
-inline hal_status_t io_getchar(char* c);
+hal_status_t io_getchar(char* c);
 
 #endif

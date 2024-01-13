@@ -10,7 +10,7 @@
 
 #ifndef HAL_TIMER_TYPEDEF
     #error "HAL_TIMER_TYPEDEF not defined"
-    __TEMPLATE_TYPEDEF(timer_t);
+    __HAL_TEMPLATE_TYPEDEF(timer_t);
 #else
     typedef HAL_TIMER_TYPEDEF timer_t;
 #endif
@@ -34,7 +34,7 @@ typedef enum {
  * @note Can be used to stop the timer using `TIMER_COUNT_MODE_STOP`
  * @note Up to implementation if can be called during timer running
 */
-inline hal_status_t timer_set_mode(timer_t timer, timer_count_mode_t timer_mode);
+hal_status_t timer_set_mode(timer_t timer, timer_count_mode_t timer_mode);
 
 /**
  * Set timer period
@@ -42,7 +42,7 @@ inline hal_status_t timer_set_mode(timer_t timer, timer_count_mode_t timer_mode)
  * @note If enabled, triggers `timer_period_isr` when timer count hits `period`
  * @note If set to value less than current count while timer is running, timer should trigger isr and reset to 0
 */
-inline hal_status_t timer_set_period(timer_t timer, timer_count_t period);
+hal_status_t timer_set_period(timer_t timer, timer_count_t period);
 
 /**
  * Start the timer (enable counting)
@@ -50,7 +50,7 @@ inline hal_status_t timer_set_period(timer_t timer, timer_count_t period);
  * @retval `HAL_STATUS_ERROR` if timer starting failed
  * @note This should not reset the current value of the counter
 */
-inline hal_status_t timer_start(timer_t timer);
+hal_status_t timer_start(timer_t timer);
 
 /**
  * Stop the timer (disable counting)
@@ -58,7 +58,7 @@ inline hal_status_t timer_start(timer_t timer);
  * @retval `HAL_STATUS_ERROR` if timer stopping failed
  * @note This should not reset the current value of the counter
 */
-inline hal_status_t timer_stop(timer_t timer);
+hal_status_t timer_stop(timer_t timer);
 
 /**
  * Clear the timer count value (set to 0)
@@ -66,13 +66,13 @@ inline hal_status_t timer_stop(timer_t timer);
  * @retval `HAL_STATUS_ERROR` if timer clearing failed
  * @note Should work and should not change if the timer is enabled or disabled
 */
-inline hal_status_t timer_clear(timer_t timer);
+hal_status_t timer_clear(timer_t timer);
 
 /**
  * Get current count of the timer
  * @note This should just act as a macro for reading timer counter register
 */
-inline timer_count_t timer_get_count(timer_t timer);
+timer_count_t timer_get_count(timer_t timer);
 
 #ifdef HAL_TIMER_USE_REGISTER_CALLBACKS
 
@@ -81,7 +81,7 @@ inline timer_count_t timer_get_count(timer_t timer);
  * Timer periodic ISR
  * Called when timer count hits timer period value
 */
-inline void timer_period_isr(timer_t timer);
+void timer_period_isr(timer_t timer);
 #endif
 
 #endif /* HAL_TIMER_H */

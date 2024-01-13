@@ -6,7 +6,7 @@
 
 #ifndef HAL_I2C_TYPEDEF
     #error "HAL_I2C_TYPEDEF not defined"
-    __TEMPLATE_TYPEDEF(i2c_t);
+    __HAL_TEMPLATE_TYPEDEF(i2c_t);
 #else
     typedef HAL_I2C_TYPEDEF i2c_t;
 #endif
@@ -30,7 +30,7 @@ typedef enum {
  * @note Blocking function
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
+hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
 
 /**
  * Receive <size> bytes via I2C from slave at address <addr>
@@ -40,7 +40,7 @@ inline hal_status_t i2c_master_send(i2c_t i2c, uint16_t addr, uint8_t* data, uin
  * @note Blocking function
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
+hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 /**
  * Send <size> bytes via I2C to slave at address <addr>
@@ -51,7 +51,7 @@ inline hal_status_t i2c_master_recv(i2c_t i2c, uint16_t addr, uint8_t* buff, uin
  * @note On complete or error `i2c_master_send_isr` is called
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
+hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, uint16_t size, uint16_t timeout);
 
 /**
  * Enable receiving <size> bytes via I2C from slave at address <addr>
@@ -61,7 +61,7 @@ inline hal_status_t i2c_master_send_it(i2c_t i2c, uint16_t addr, uint8_t* data, 
  * @note On complete or error `i2c_master_recv_isr` is called
  * @note Implement in hal_i2c.c
  */
-inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
+hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, uint16_t size, uint16_t timeout);
 
 #ifdef HAL_I2C_USE_REGISTER_CALLBACKS
 /**
@@ -71,20 +71,20 @@ inline hal_status_t i2c_master_recv_it(i2c_t i2c, uint16_t addr, uint8_t* buff, 
  * @note Implement in hal_i2c.c
  * @note Multiple registrations should override the last one
 */
-inline hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_callback_src_t src);
+hal_status_t i2c_register_callback(i2c_t i2c, callback_t callback, i2c_callback_src_t src);
 #else
 /**
  * Master send ISR
  * @note This function should be called from lower level (driver's) ISR in the hal_i2c.c
  * @todo Could split these ISRs to send_cmplt_isr and send_error_isr
  */
-inline void i2c_master_send_isr(i2c_t i2c, hal_status_t status);
+void i2c_master_send_isr(i2c_t i2c, hal_status_t status);
 
 /**
  * Master receive ISR
  * @note This function should be called from lower level (driver's) ISR in the hal_i2c.c
  */
-inline void i2c_master_recv_isr(i2c_t i2c, hal_status_t status);
+void i2c_master_recv_isr(i2c_t i2c, hal_status_t status);
 #endif
 
 #endif /* HAL_I2C_H */
