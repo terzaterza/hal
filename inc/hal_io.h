@@ -49,4 +49,10 @@ hal_status_t io_putchar(const char c);
 */
 hal_status_t io_getchar(char* c);
 
+/**
+ * Register a callback for when data is received over IO port
+ * @note Callback function is called from ISR context
+ */
+hal_status_t io_register_receive_callback(void (*callback)(uint8_t* data, uint16_t len));
+
 #endif

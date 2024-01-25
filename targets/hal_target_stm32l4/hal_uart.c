@@ -137,6 +137,16 @@ inline hal_status_t uart_register_callback(uart_t uart, callback_t callback, uar
 }
 #else
 
+__weak void uart_send_isr(uart_t uart, hal_status_t status)
+{
+
+}
+
+__weak void uart_recv_isr(uart_t uart, hal_status_t status)
+{
+
+}
+
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
     uart_send_isr(huart, HAL_STATUS_OK);
