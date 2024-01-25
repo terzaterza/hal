@@ -51,10 +51,11 @@ inline hal_status_t adc_set_channels(adc_t adc, uint8_t* channels, uint8_t n_cha
         }
     }
 
-    if (ret_status == HAL_STATUS_OK) {
-        adc->Instance->SQR1 &= ~(ADC_SQR1_L);
-        adc->Instance->SQR1 |= ADC_SQR1(n_channels);
-    }
+//    if (ret_status == HAL_STATUS_OK) {
+//        adc->Instance->SQR1 &= ~(ADC_SQR1_L);
+//        adc->Instance->SQR1 |= ADC_SQR1(n_channels);
+//    }
+    /** @todo Call ADC init */
 
     return ret_status;
 }
@@ -67,6 +68,25 @@ inline uint8_t adc_read_eos_flag(adc_t adc)
     return __HAL_ADC_GET_FLAG(adc, ADC_FLAG_EOS) != 0;
 }
 
+/**
+ * Read the end of sequence conversion status flag
+*/
+inline void adc_clear_eos_flag(adc_t adc)
+{
+    __HAL_ADC_CLEAR_FLAG(adc, ADC_FLAG_EOS);
+}
+
+/**
+ * Read the position of dma write pointer relative to start of the buffer
+ * @note Currently returns number of samples until the end of the buffer
+ */
+inline uint32_t adc_dma_get_counter(adc_t adc)
+{
+    uint32_t rel_to_end = __HAL_DMA_GET_COUNTER(adc->DMA_Handle);
+    // uint32_t buffer_len = adc->DMA_Handle->Instance->
+    return rel_to_end;
+}
+
 #ifdef HAL_ADC_USE_REGISTER_CALLBACKS
 /**
  * Register a callback for ADC event
@@ -77,8 +97,28 @@ inline uint8_t adc_read_eos_flag(adc_t adc)
 */
 inline hal_status_t adc_register_callback(adc_t adc, callback_t callback);
 #else
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+/**
+ * ADC end of sequence ISR
+ * @note This ISR should be entered every time all channels which are
+ * selected are sampled
+ * @note This function should be called from lower level (driver's) ISR in the hal_adc.c
+*/
+__weak void adc_eos_isr(adc_t adc)
 {
-    adc_eos_isr(hadc);
+    UNUSED(adc);
+}
+
+/**
+ * ADC buffer filled by DMA ISR
+ * @note This function should be called from lower level (driver's) ISR in the hal_adc.c
+*/
+__weak void adc_dma_buffer_filled_isr(adc_t adc)
+{
+    UNUSED(adc);
+}
+
+inline void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    adc_dma_buffer_filled_isr(hadc);
 }
 #endif

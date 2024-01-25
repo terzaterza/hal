@@ -59,6 +59,16 @@ hal_status_t uart_send_it(uart_t uart, uint8_t* data, uint16_t size, uint16_t ti
  */
 hal_status_t uart_recv_it(uart_t uart, uint8_t* buff, uint16_t size, uint16_t timeout);
 
+/**
+ * Returns whether UART receive buffer is empty
+ */
+uint8_t uart_rx_not_empty(uart_t uart);
+
+/**
+ * Returns contents of UART receive data register
+ */
+uint8_t uart_get_rx_data(uart_t uart);
+
 #ifdef HAL_UART_USE_REGISTER_CALLBACKS
 /**
  * Register a callback for UART event

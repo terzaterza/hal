@@ -33,6 +33,16 @@ hal_status_t adc_set_channels(adc_t adc, uint8_t* channels, uint8_t n_channels);
 */
 uint8_t adc_read_eos_flag(adc_t adc);
 
+/**
+ * Read the end of sequence conversion status flag
+*/
+void adc_clear_eos_flag(adc_t adc);
+
+/**
+ * Read the position of dma write pointer relative to start of the buffer
+ */
+uint32_t adc_dma_get_counter(adc_t adc);
+
 #ifdef HAL_ADC_USE_REGISTER_CALLBACKS
 /**
  * Register a callback for ADC event
@@ -50,6 +60,12 @@ hal_status_t adc_register_callback(adc_t adc, callback_t callback);
  * @note This function should be called from lower level (driver's) ISR in the hal_adc.c
 */
 void adc_eos_isr(adc_t adc);
+
+/**
+ * ADC buffer filled by DMA ISR
+ * @note This function should be called from lower level (driver's) ISR in the hal_adc.c
+*/
+void adc_dma_buffer_filled_isr(adc_t adc);
 #endif
 
 #endif

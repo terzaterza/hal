@@ -25,6 +25,7 @@ inline hal_status_t uart_send(uart_t uart, uint8_t* data, uint16_t size, uint16_
     if (HAL_UART_Transmit(uart, data, size, timeout) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
+    while (HAL_UART_GetState(uart)) {}
 
     return ret_status;
 }
@@ -46,6 +47,7 @@ inline hal_status_t uart_recv(uart_t uart, uint8_t* buff, uint16_t size, uint16_
     if (HAL_UART_Receive(uart, buff, size, timeout) != HAL_OK) {
         ret_status = HAL_STATUS_ERROR;
     }
+    while (HAL_UART_GetState(uart)) {}
 
     return ret_status;
 }
@@ -103,6 +105,22 @@ inline hal_status_t uart_recv_it(uart_t uart, uint8_t* buff, uint16_t size, uint
     }
 
     return ret_status;
+}
+
+/**
+ * Returns whether UART receive buffer is empty
+ */
+inline uint8_t uart_rx_not_empty(uart_t uart)
+{
+    return __HAL_UART_GET_FLAG(uart, UART_FLAG_RXNE);
+}
+
+/**
+ * Returns contents of UART receive data register
+ */
+inline uint8_t uart_get_rx_data(uart_t uart)
+{
+    return (uint8_t)(uart->Instance->RDR & 0xff);
 }
 
 #ifdef HAL_UART_USE_REGISTER_CALLBACKS
