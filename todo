@@ -1,4 +1,90 @@
-add (uart, i2c, vcp)_register_callback(uart_t uart, callback_type_t callback_type)
 
-add hal_timer.h
-add hal_adc.h
+src/drivers/device.h
+
+struct device {
+    int (*read)(struct device* device, char* data, int len);
+    int (*write)(struct device* device, char* data, int len);
+    hal_status_t (*ioctl)(struct device* device, int ctl_type, void* arg);
+    hal_status_t (*close)(struct device* device); // use for freeing any possible malloc
+    void* params;
+}
+
+
+inc/hal_i2c.h
+
+hal_status_t i2c_device_open(struct device* device, i2c_t bus, uint8_t addr);
+// similar implementation as for below (i2c_mux_device_t -> i2c_device_t, ...)
+
+
+src/drivers/i2c_mux/i2c_mux.c
+
+typedef struct {
+    i2c_mux_t* mux;
+    enum i2c_mux_bus bus;
+    uint8_t addr;
+} i2c_mux_device_t;
+
+int i2c_mux_device_read(struct device* device, char* data, int len)
+{
+    i2c_mux_device_t* device = (i2c_mux_device_t*)(device->params);
+    
+    /* use api for i2c_mux with this mux to send the message */
+    return i2c_mux_send(device->mux, device->bus, device->addr, data, len);
+}
+
+hal_status_t i2c_mux_device_open(struct device* device, i2c_mux_t* mux, enum i2c_mux_bus bus, uint8_t addr)
+{
+    /* device params can be pre allocated (statically) to avoid using malloc */
+    if (device->params == NULL)
+        device->params = malloc(sizeof(i2c_mux_device_t));
+
+    device->params->mux = mux;
+    device->params->bus = bus;
+    device->params->addr = addr;
+
+    device->read = &i2c_mux_device_read;
+    // so on for write, ioctl, close...
+}
+
+
+each device type (pressure sensor, humidity sensor, i2c mux, led driver, ...) has an init (open) method which
+takes struct device corresponding to that specific device and creates the api compatible struct for that type
+
+example:
+
+src/drivers/sensors/temperature/sensor_temperature.h
+
+typedef struct sensor_temperature {
+    struct device* device;
+    hal_status_t (*get_temperature)(struct sensor_temperature* sensor, float16_t* temp);
+} sensor_temperature_t;
+
+
+src/drivers/sensors/temperature/bme280.c
+
+hal_status_t bme280_sensor_temperature_open(sensor_temperature_t* sensor, struct device* device)
+{
+    sensor->device = device;
+    sensor->get_temperature = &bme280_sensor_temperature_get;
+
+    return HAL_STATUS_OK;
+}
+
+hal_status_t bme280_sensor_temperature_get(sensor_temperature_t* sensor, float16_t* temp)
+{
+    struct device* device = sensor->device;
+
+    // select register to read
+    int write_n = device->write(device, BME280_REG_TEMP, 1);
+
+    if (write_n != 1)
+        return HAL_STATUS_ERROR;
+
+    // read register
+    int read_n = device->read(device, temp, 2);
+
+    // put next line into hal_core.h
+    #define HAL_STATUS_ASSERT(x)    ((x) ? HAL_STATUS_OK : HAL_STATUS_ERROR)
+
+    return HAL_STATUS_ASSERT(read_n == 2);
+}
