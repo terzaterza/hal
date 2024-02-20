@@ -104,28 +104,39 @@ hal_status_t stm32_hal_i2c_open(i2c_t* i2c, I2C_HandleTypeDef* hal_hi2c)
 
 
 
-src/drivers/i2c_mux/i2c_mux.h
+src/drivers/i2c_mux.h
 
-typedef enum i2c_mux_ch {
+#define i2c_mux_sel_ch(mux, ...)    (mux->sel_ch(mux, __VA_ARGS__))
+
+typedef enum i2c_mux_bus {
     I2C_MUX_CH_0 = 0,
     I2C_MUX_CH_1,
     I2C_MUX_CH_2,
     ...
-} i2c_mux_ch_e;
+} i2c_mux_bus_e;
 
 typedef struct i2c_mux {
-    i2c_mux_ch_e selected_ch;
-    // for now assuming all i2c muxes are controlled via i2c (not via gpio for example)
-    // if wanting to implement mux controlled via gpio than remove this sdev and replace with void* params and
-    // with function pointers for selecting the channel, ... instead of having one function which assumes there is a sdev
-    sdev_t* device;
+    hal_status_t (*sel_bus)(struct i2c_mux* mux, i2c_mux_bus_e bus);
+    i2c_mux_bus_e selected;
+    void* params;
 } i2c_mux_t;
 
-typedef struct {
-    i2c_mux_t* mux;
-    enum i2c_mux_bus bus;
-    uint8_t addr;
-} i2c_mux_device_t;
+
+src/drivers/i2c_mux.c
+
+hal_status_t i2c_mux_bus_write(i2c_t* i2c, uint8_t addr, uint8_t* data, size_t nbyte)
+{
+    i2c_mux_t* i2c_mux = (i2c_mux_t*)(i2c->params);
+
+    if (!i2c_mux_sel_bus(i2c_mux))
+        return HAL_STATUS_ERROR;
+}
+
+// replace order of mux and i2c so that it matches regular OOP order (instance (this) of the method comes first) in all open functions
+i2c_mux_bus_open(i2c_t* i2c, i2c_mux_t* mux, i2c_mux_bus_e bus)
+{
+
+}
 
 int i2c_mux_device_read(struct device* device, char* data, int len)
 {
