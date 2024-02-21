@@ -4,84 +4,13 @@
 // uart_sdev_open(uart_t* uart)
 // usb_cdc_sdev_open(...)
 
+/*
 
-src/drivers/sdev.h
+SHOULD PASS ONLY PARAMS TO ALL FUNCTIONS WHICH ARE DEVICE SPECIFIC
+STRUCT PARAMETERS WHICH ARE DEVICE INDEPENDENT SHOULD BE CHANGED THROUGH
+FIXED FUNCTIONS
 
-/**
- * Serial device implementation
- */
-
-// this can also be static inline functions but this is less code (cleaner)
-#define sdev_read(device, ...)    (device->read(device, __VA_ARGS__))
-#define sdev_write(device, ...)   (device->write(device, __VA_ARGS__))
-...
-
-typedef struct serial_device {
-    hal_status_t (*write)(struct serial_device* device, uint8_t* data, size_t len);
-    hal_status_t (*read)(struct serial_device* device, uint8_t* data, size_t len);
-    hal_status_t (*test)(struct serial_device* device);
-    hal_status_t (*init)(struct serial_device* device);
-    hal_status_t (*ioctl)(struct serial_device* device, int ctl_type, void* arg);
-    hal_status_t (*close)(struct serial_device* device); // use for freeing any possible malloc
-    void* params; // can rename to private_data to match linux
-    // struct device* parent; // not needed for now, add if needed to enforce "device tree" structure
-} sdev_t;
-
-
-src/drivers/i2c.h
-
-#define i2c_read(i2c, ...)  (i2c->read(i2c, __VA_ARGS__))
-...
-
-typedef struct i2c {
-    hal_status_t (*write)(struct i2c* i2c, uint8_t addr, uint8_t* data, size_t nbyte);
-    hal_status_t (*read)(struct i2c* i2c, uint8_t addr, uint8_t* data, size_t nbyte);
-    hal_status_t (*dev_probe)(struct i2c* i2c, uint8_t addr);
-    void* params;
-
-    // add async_write and async_read with registrable callbacks
-} i2c_t;
-
-typedef struct i2c_sdev_params {
-    i2c_t* bus;
-    uint8_t addr;
-} i2c_sdev_params_t;
-
-
-src/drivers/i2c.c
-
-hal_status_t i2c_sdev_write(sdev_t* device, uint8_t* data, size_t len)
-{
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
-
-    return i2c_write(params->bus, params->addr, data, len);
-}
-
-// similar for i2c_sdev_read
-
-
-hal_status_t i2c_sdev_open(sdev_t* device, i2c_t* bus, uint8_t addr)
-{
-    if (device->params == NULL) {
-        #ifdef HAL_MALLOC_ENABLED
-        device->params = malloc(sizeof(i2c_sdev_params_t));
-        if (device->params == NULL)
-            return HAL_STATUS_ERROR;
-        #else
-            return HAL_STATUS_ERROR;
-        #endif
-    }
-
-    device->params->bus = bus;
-    device->params->addr = addr;
-
-    device->write = &i2c_sdev_write;
-    device->read = &i2c_sdev_read;
-    device->test = bus->dev_probe(addr);
-    ...
-
-    return HAL_STATUS_OK;
-}
+*/
 
 
 src/drivers/i2c/stm32_hal_i2c.c
@@ -101,26 +30,6 @@ hal_status_t stm32_hal_i2c_open(i2c_t* i2c, I2C_HandleTypeDef* hal_hi2c)
 
     return HAL_STATUS_OK;
 }
-
-
-
-src/drivers/i2c_mux.h
-
-#define i2c_mux_sel_ch(mux, ...)    (mux->sel_ch(mux, __VA_ARGS__))
-
-typedef enum i2c_mux_bus {
-    I2C_MUX_CH_0 = 0,
-    I2C_MUX_CH_1,
-    I2C_MUX_CH_2,
-    ...
-} i2c_mux_bus_e;
-
-typedef struct i2c_mux {
-    hal_status_t (*sel_bus)(struct i2c_mux* mux, i2c_mux_bus_e bus);
-    i2c_mux_bus_e selected;
-    void* params;
-} i2c_mux_t;
-
 
 src/drivers/i2c_mux.c
 
