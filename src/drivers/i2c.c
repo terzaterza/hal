@@ -2,6 +2,56 @@
 #include "drivers/sdev.h"
 
 /**
+ * I2C driver structure
+*/
+typedef struct i2c {
+    i2c_ops_t* ops;
+    void* context;
+} i2c_t;
+
+/**
+ * Open handler
+*/
+status_t i2c_open(i2c_t* i2c, i2c_ops_t* ops, void* context)
+{
+    /** @todo Here init other I2C struct members when added */
+
+    /* Can check here which ops are implemented and set flags accordingly if needed */
+    i2c->ops = ops;
+    i2c->context = context;
+
+    return STATUS_OK;
+}
+
+/**
+ * Call the implementation specific write handler
+ * @todo Maybe can be implemented as `#define` or `static inline`
+*/
+status_t i2c_write(i2c_t* i2c, uint8_t addr, uint8_t* data, size_t nbyte)
+{
+    return i2c->ops->write(i2c->context, addr, data, nbyte);
+}
+
+/**
+ * Call the implementation specific read handler
+ * @todo Maybe can be implemented as `#define` or `static inline`
+*/
+status_t i2c_read(i2c_t* i2c, uint8_t addr, uint8_t* data, size_t nbyte)
+{
+    return i2c->ops->read(i2c->context, addr, data, nbyte);
+}
+
+/**
+ * Call the implementation specific dev_probe handler
+ * @todo Maybe can be implemented as `#define` or `static inline`
+*/
+status_t i2c_dev_probe(i2c_t* i2c, uint8_t addr)
+{
+    return i2c->ops->dev_probe(i2c->context, addr);
+}
+
+
+/**
  * Additional data for serial devices connected to an I2C
 */
 typedef struct i2c_sdev_params {
