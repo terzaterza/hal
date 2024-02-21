@@ -12,6 +12,7 @@
  * @note Should only be used through API functions starting with i2c_*
 */
 typedef struct i2c i2c_t;
+typedef struct i2c_sdev_context i2c_sdev_context_t;
 
 /**
  * Hardware (driver) specific implementation of I2C functions

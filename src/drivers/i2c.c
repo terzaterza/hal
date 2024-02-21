@@ -10,7 +10,7 @@ typedef struct i2c {
 } i2c_t;
 
 /**
- * Open handler
+ * Initialize i2c structure
 */
 status_t i2c_open(i2c_t* i2c, i2c_ops_t* ops, void* context)
 {

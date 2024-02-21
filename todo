@@ -31,6 +31,36 @@ hal_status_t stm32_hal_i2c_open(i2c_t* i2c, I2C_HandleTypeDef* hal_hi2c)
     return HAL_STATUS_OK;
 }
 
+implementing i2c mux driver using device (turns out to be complicated getting the input bus from sdev):
+src/drivers/i2c_mux/tca9544a.c
+
+typedef struct tca9544a_context {
+    sdev_t* device;
+} tca9544a_context_t;
+
+static status_t tca9544a_ch_select(void* context, i2c_mux_ch_t ch)
+{
+    tca9544a_context_t* params = (tca9544a_context_t*)context;
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+status_t tca9544a_i2c_mux_open(i2c_mux_t* mux, sdev_t* device, tca9544a_context_t* context)
+{
+    static i2c_mux_ops_t i2c_mux_ops = {
+        .ch_select = &tca9544a_ch_select
+    };
+
+    if (context == NULL)
+        return STATUS_ERROR;
+    context->device = device;
+    i2c_t* device_bus = context->device->context->bus;
+
+    return i2c_mux_open(...)
+}
+
+
+
 src/drivers/i2c_mux.c
 
 hal_status_t i2c_mux_bus_write(i2c_t* i2c, uint8_t addr, uint8_t* data, size_t nbyte)

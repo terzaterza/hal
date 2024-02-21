@@ -11,38 +11,43 @@ typedef enum i2c_mux_ch {
     I2C_MUX_CH_0 = 0,
     I2C_MUX_CH_1,
     I2C_MUX_CH_2,
-    I2C_MUX_CH_3
+    I2C_MUX_CH_3,
+    I2C_MUX_CH_4,
+    I2C_MUX_CH_5,
+    I2C_MUX_CH_6,
+    I2C_MUX_CH_7,
+    I2C_MUX_CH_NONE
 } i2c_mux_ch_t;
 
 /**
- * I2C multiplexer API definition
+ * I2C multiplexer driver interface
 */
-typedef struct i2c_mux {
-    status_t (*ch_select)(struct i2c_mux* mux, i2c_mux_ch_t ch);
-    i2c_mux_ch_t ch_current;
-    uint8_t ch_count;
-    i2c_t* input_bus;
-    void* params;
-} i2c_mux_t;
+typedef struct i2c_mux i2c_mux_t;
+
+typedef struct i2c_mux_ops {
+    status_t (*ch_select)(void* context, i2c_mux_ch_t ch);
+} i2c_mux_ops_t;
+
+/**
+ * Create and initialize I2C multiplexer structure
+ * 
+ * @note Requires static allocation
+*/
+status_t i2c_mux_open(i2c_mux_t* mux, i2c_t* in, uint8_t nout, i2c_mux_ops_t* ops, void* context);
 
 /**
  * Select output channel for the mux
- * @note API function
- * @note Implemented as static inline instead of #define with va args to implement current channel checking
 */
-static inline status_t i2c_mux_ch_select(i2c_mux_t* mux, i2c_mux_ch_t ch)
-{
-    if (ch >= mux->ch_count)
-        return STATUS_ERROR;
+status_t i2c_mux_ch_select(i2c_mux_t* mux, i2c_mux_ch_t ch);
 
-    if (mux->ch_current == ch)
-        return STATUS_OK;
+/**
+ * Get input bus reference
+*/
+i2c_t* i2c_mux_get_in_bus(i2c_mux_t* mux);
 
-    if (mux->ch_select(mux, ch) == STATUS_OK) {
-        mux->ch_current = ch;
-        return STATUS_OK;
-    }
-    return STATUS_ERROR;
-}
+/**
+ * Open an I2C corresponding to the given output channel
+*/
+status_t i2c_mux_ch_as_bus(i2c_mux_t* mux, i2c_t* bus, i2c_mux_ch_t ch);
 
 #endif
