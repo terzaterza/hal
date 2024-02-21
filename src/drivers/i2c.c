@@ -54,17 +54,17 @@ status_t i2c_dev_probe(i2c_t* i2c, uint8_t addr)
 /**
  * Additional data for serial devices connected to an I2C
 */
-typedef struct i2c_sdev_params {
+typedef struct i2c_sdev_context {
     i2c_t* bus;
     uint8_t addr;
-} i2c_sdev_params_t;
+} i2c_sdev_context_t;
 
 /**
  * Serial device write handler for a device connected to an I2C
 */
-status_t i2c_sdev_write(sdev_t* device, uint8_t* data, size_t len)
+static status_t i2c_sdev_write(void* context, uint8_t* data, size_t len)
 {
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
+    i2c_sdev_context_t* params = (i2c_sdev_context_t*)context;
 
     return i2c_write(params->bus, params->addr, data, len);
 }
@@ -72,9 +72,9 @@ status_t i2c_sdev_write(sdev_t* device, uint8_t* data, size_t len)
 /**
  * Serial device read handler for a device connected to an I2C
 */
-status_t i2c_sdev_read(sdev_t* device, uint8_t* data, size_t len)
+static status_t i2c_sdev_read(void* context, uint8_t* data, size_t len)
 {
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
+    i2c_sdev_context_t* params = (i2c_sdev_context_t*)context;
 
     return i2c_read(params->bus, params->addr, data, len);
 }
@@ -82,9 +82,9 @@ status_t i2c_sdev_read(sdev_t* device, uint8_t* data, size_t len)
 /**
  * Serial device test handler for a device connected to an I2C
 */
-status_t i2c_sdev_test(sdev_t* device)
+static status_t i2c_sdev_test(void* context)
 {
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
+    i2c_sdev_context_t* params = (i2c_sdev_context_t*)context;
 
     return i2c_dev_probe(params->bus, params->addr);
 }
@@ -92,42 +92,37 @@ status_t i2c_sdev_test(sdev_t* device)
 /**
  * Serial device close handler for a device connected to an I2C
 */
-status_t i2c_sdev_close(sdev_t* device)
+static status_t i2c_sdev_close(void* context)
 {
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
+    i2c_sdev_context_t* params = (i2c_sdev_context_t*)context;
     
-    /** @todo Check if params was allocated using malloc and free if needed*/
+    /** 
+     * @todo Rename this function to `i2c_sdev_close_static` once added separate functions
+     * `i2c_sdev_open_static` and `i2c_sdev_open`, so that `i2c_sdev_close` for dynamic allocation can free the memory
+     */
 
     return STATUS_OK;
 }
 
 /**
  * Initialize the serial device object for a device with the given address
+ * 
+ * @note Requires static context allocation
 */
-status_t i2c_sdev_open(i2c_t* i2c, sdev_t* device, uint8_t addr)
+status_t i2c_sdev_open(i2c_t* i2c, sdev_t* device, i2c_sdev_context_t* context, uint8_t addr)
 {
-    if (device->params == NULL) {
-        #ifdef HAL_MALLOC_ENABLED
-            device->params = malloc(sizeof(i2c_sdev_params_t));
-            if (device->params == NULL)
-                return STATUS_ERROR;
-        #else
-            return STATUS_ERROR;
-        #endif
-    }
+    static sdev_ops_t i2c_sdev_ops = {
+        .test = &i2c_sdev_test,
+        .write = &i2c_sdev_write,
+        .read = &i2c_sdev_read,
+        .close = &i2c_sdev_close,
+        .ioctl = NULL
+    };
 
-    i2c_sdev_params_t* params = (i2c_sdev_params_t*)(device->params);
-    params->bus = i2c;
-    params->addr = addr;
+    if (context == NULL)
+        return STATUS_ERROR;
+    context->bus = i2c;
+    context->addr = addr;
 
-    device->write = &i2c_sdev_write;
-    device->read = &i2c_sdev_read;
-    device->test = &i2c_sdev_test;
-    device->close = &i2c_sdev_close;
-
-    /** @todo To be implemented */
-    device->init = NULL;
-    device->ioctl = NULL;
-
-    return STATUS_OK;
+    return sdev_open(device, &i2c_sdev_ops, context);
 }
